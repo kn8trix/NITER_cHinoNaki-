@@ -34,6 +34,11 @@ When evening classes and campus services raise demand after solar production fal
 
 The flow below shows the complete BUP dispatch decision path. It separates daytime solar and directive handling from nighttime battery optimization, then returns to the shared 24-hour loop.
 
+![GridWise BUP energy optimization flowchart](docs/gridwise-flowchart.svg)
+
+<details>
+<summary>View editable Mermaid source</summary>
+
 ```mermaid
 flowchart TD
 		A[Start system dispatch / LP optimizer run] --> B{Is it daytime or nighttime?}
@@ -84,6 +89,8 @@ flowchart TD
 		class G,K solar;
 		class A,T finish;
 ```
+
+</details>
 
 ### How the optimizer works through the flow
 

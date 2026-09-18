@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="1940" viewBox="0 0 760 1940" role="img" aria-labelledby="title desc">
+  <title id="title">GridWise BUP energy optimization flowchart</title>
+  <desc id="desc">Daytime and nighttime decision flow for BUP campus battery and solar dispatch optimization.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#263238"/>
+    </marker>
+    <style>
+      .label { font: 16px Arial, sans-serif; fill: #202124; text-anchor: middle; }
+      .small { font: 14px Arial, sans-serif; fill: #202124; text-anchor: middle; }
+      .edge { stroke: #263238; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .node { stroke: #263238; stroke-width: 2; }
+      .blue { fill: #2196f3; }
+      .yellow { fill: #fff3cd; }
+      .night { fill: #e3f2fd; }
+      .green { fill: #c8e6c9; }
+      .red { fill: #ffcdd2; }
+      .white { fill: #fff; }
+    </style>
+  </defs>
+
+  <!-- Main vertical spine -->
+  <path class="edge" d="M380 88 V130"/>
+  <path class="edge" d="M380 230 V270"/>
+  <path class="edge" d="M380 390 V430"/>
+  <path class="edge" d="M380 550 V590"/>
+  <path class="edge" d="M380 710 V750"/>
+  <path class="edge" d="M380 870 V910"/>
+  <path class="edge" d="M380 1030 V1070"/>
+  <path class="edge" d="M380 1190 V1230"/>
+  <path class="edge" d="M380 1350 V1390"/>
+  <path class="edge" d="M380 1510 V1550"/>
+  <path class="edge" d="M380 1670 V1730"/>
+
+  <!-- Start -->
+  <rect class="node blue" x="275" y="20" width="210" height="68" rx="2"/>
+  <text class="label" x="380" y="47" fill="#fff" style="fill:#fff">Start System</text>
+  <text class="label" x="380" y="67" fill="#fff" style="fill:#fff">Dispatch / LP</text>
+  <text class="label" x="380" y="87" fill="#fff" style="fill:#fff">Optimizer Run</text>
+
+  <!-- Day/night decision -->
+  <polygon class="node white" points="380,130 470,180 380,230 290,180"/>
+  <text class="small" x="380" y="176">Is It Daytime or</text>
+  <text class="small" x="380" y="194">Nighttime?</text>
+
+  <!-- Branch labels -->
+  <path class="edge" d="M290 180 H145 V255"/>
+  <path class="edge" d="M470 180 H615 V255"/>
+  <text class="small" x="145" y="172">Daytime</text>
+  <text class="small" x="615" y="172">Nighttime</text>
+
+  <!-- Daytime cylinder -->
+  <path class="node yellow" d="M45 255 C45 240 245 240 245 255 V315 C245 330 45 330 45 315 Z"/>
+  <ellipse class="node yellow" cx="145" cy="255" rx="100" ry="15"/>
+  <text class="small" x="145" y="282">Daytime Cycle &amp;</text>
+  <text class="small" x="145" y="301">Directive</text>
+  <text class="small" x="145" y="320">Application</text>
+
+  <!-- Nighttime cylinder -->
+  <path class="node night" d="M515 255 C515 240 715 240 715 255 V315 C715 330 515 330 515 315 Z"/>
+  <ellipse class="node night" cx="615" cy="255" rx="100" ry="15"/>
+  <text class="small" x="615" y="282">Nighttime Cycle</text>
+  <text class="small" x="615" y="301">&amp; Optimization</text>
+
+  <!-- Day branch -->
+  <path class="edge" d="M145 330 V365"/>
+  <rect class="node white" x="45" y="365" width="200" height="100"/>
+  <text class="small" x="145" y="392">Parse Operator</text>
+  <text class="small" x="145" y="411">Notes &amp; Apply</text>
+  <text class="small" x="145" y="430">Directives</text>
+  <text class="small" x="145" y="449">no_charge,</text>
+  <text class="small" x="145" y="468">max_grid, min_reserve</text>
+
+  <path class="edge" d="M145 465 V500"/>
+  <rect class="node white" x="45" y="500" width="200" height="90"/>
+  <text class="small" x="145" y="530">Check Solar</text>
+  <text class="small" x="145" y="549">Generation</text>
+  <text class="small" x="145" y="568">Forecast (kWh)</text>
+
+  <path class="edge" d="M145 590 V625"/>
+  <rect class="node white" x="45" y="625" width="200" height="90"/>
+  <text class="small" x="145" y="655">Check Campus</text>
+  <text class="small" x="145" y="674">Demand &amp; Tariff</text>
+  <text class="small" x="145" y="693">Rates</text>
+
+  <path class="edge" d="M145 715 V750"/>
+  <polygon class="node white" points="145,750 245,810 145,870 45,810"/>
+  <text class="small" x="145" y="797">Solar Voltage &amp;</text>
+  <text class="small" x="145" y="816">Energy Enough</text>
+  <text class="small" x="145" y="835">+ Cost Trade-off</text>
+  <text class="small" x="145" y="854">Check?</text>
+
+  <path class="edge" d="M45 810 H20 V950"/>
+  <text class="small" x="23" y="900">No</text>
+  <rect class="node white" x="20" y="950" width="200" height="75"/>
+  <text class="small" x="120" y="981">Use Battery</text>
+  <text class="small" x="120" y="1001">Dispatch</text>
+
+  <path class="edge" d="M120 1025 V1070"/>
+  <polygon class="node white" points="120,1070 220,1130 120,1190 20,1130"/>
+  <text class="small" x="120" y="1112">Battery Reserve</text>
+  <text class="small" x="120" y="1131">&amp; SOC</text>
+  <text class="small" x="120" y="1150">Above Minimum</text>
+  <text class="small" x="120" y="1169">Threshold?</text>
+
+  <path class="edge" d="M20 1130 H5 V1260"/>
+  <text class="small" x="20" y="1210">No</text>
+  <rect class="node red" x="5" y="1260" width="205" height="75"/>
+  <text class="small" x="107" y="1290">Use Grid</text>
+  <text class="small" x="107" y="1309">(Respecting</text>
+  <text class="small" x="107" y="1328">max_grid_window)</text>
+
+  <path class="edge" d="M220 1130 H315 V1260"/>
+  <text class="small" x="278" y="1210">Yes</text>
+
+  <!-- Solar merge -->
+  <path class="edge" d="M245 810 H315 V1390"/>
+  <text class="small" x="278" y="890">Yes</text>
+  <rect class="node green" x="220" y="1260" width="190" height="75"/>
+  <text class="small" x="315" y="1290">Power Campus &amp;</text>
+  <text class="small" x="315" y="1309">Battery via Solar</text>
+
+  <!-- Night branch -->
+  <path class="edge" d="M615 330 V365"/>
+  <rect class="node white" x="515" y="365" width="200" height="75"/>
+  <text class="small" x="615" y="396">Nighttime Phase</text>
+  <text class="small" x="615" y="416">Evaluation</text>
+
+  <path class="edge" d="M615 440 V475"/>
+  <rect class="node white" x="515" y="475" width="200" height="90"/>
+  <text class="small" x="615" y="505">Check Battery</text>
+  <text class="small" x="615" y="524">Voltage &amp; State</text>
+  <text class="small" x="615" y="543">of Charge</text>
+
+  <path class="edge" d="M615 565 V600"/>
+  <polygon class="node white" points="615,600 715,660 615,720 515,660"/>
+  <text class="small" x="615" y="642">Sufficient</text>
+  <text class="small" x="615" y="661">Energy +</text>
+  <text class="small" x="615" y="680">End-of-Day</text>
+  <text class="small" x="615" y="699">Neutrality Feasible?</text>
+
+  <path class="edge" d="M515 660 H450 V790"/>
+  <text class="small" x="480" y="750">No</text>
+  <rect class="node red" x="350" y="790" width="200" height="85"/>
+  <text class="small" x="450" y="820">Use Grid</text>
+  <text class="small" x="450" y="839">(Accounting for</text>
+  <text class="small" x="450" y="858">Dynamic Tariffs)</text>
+
+  <path class="edge" d="M715 660 H740 V790"/>
+  <text class="small" x="720" y="750">Yes</text>
+  <rect class="node white" x="505" y="790" width="210" height="85"/>
+  <text class="small" x="610" y="820">Discharge</text>
+  <text class="small" x="610" y="839">Battery / Hold</text>
+  <text class="small" x="610" y="858">Reserve</text>
+
+  <path class="edge" d="M450 875 V910 H610 V925"/>
+  <path class="edge" d="M610 875 V925"/>
+  <rect class="node white" x="505" y="925" width="210" height="100"/>
+  <text class="small" x="610" y="955">Evaluate</text>
+  <text class="small" x="610" y="974">Forward Plan:</text>
+  <text class="small" x="610" y="993">Looking Plan:</text>
+  <text class="small" x="610" y="1012">Charge at</text>
+  <text class="small" x="610" y="1031">Cheaper Future Hour?</text>
+
+  <path class="edge" d="M610 1025 V1070"/>
+  <rect class="node white" x="505" y="1070" width="210" height="110"/>
+  <text class="small" x="610" y="1100">Enforce End-of-Day</text>
+  <text class="small" x="610" y="1119">Neutrality</text>
+  <text class="small" x="610" y="1150">battery_energy[23]</text>
+  <text class="small" x="610" y="1169">== initial_energy</text>
+
+  <!-- Finish -->
+  <path class="edge" d="M315 1335 V1390"/>
+  <path class="edge" d="M107 1335 V1360 H315 V1390"/>
+  <path class="edge" d="M610 1180 V1360 H315 V1390"/>
+  <rect class="node green" x="220" y="1390" width="190" height="85"/>
+  <text class="small" x="315" y="1420">Finish /</text>
+  <text class="small" x="315" y="1439">Continue 24-</text>
+  <text class="small" x="315" y="1458">Hour Loop</text>
+</svg>
