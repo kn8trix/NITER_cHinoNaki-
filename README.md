@@ -32,39 +32,41 @@ When evening classes and campus services raise demand after solar production fal
 
 ## 🌞🌙 Dispatch Flow
 
-The following flow captures the operating logic used by the project. The daytime and nighttime branches converge into one continuous 24-hour optimization loop.
+The flow below shows the complete BUP dispatch decision path. It separates daytime solar and directive handling from nighttime battery optimization, then returns to the shared 24-hour loop.
 
 ```mermaid
 flowchart TD
-		A[Start system dispatch / LP optimizer run] --> B{Daytime or nighttime?}
+		A[Start system dispatch / LP optimizer run] --> B{Is it daytime or nighttime?}
 
-		B -->|Daytime| C([Daytime cycle and directive application])
-		B -->|Nighttime| D([Nighttime cycle and optimization])
+		subgraph DAY[Daytime cycle and directive application]
+			C[Parse operator notes and apply directives] --> D[Check solar generation forecast]
+			D --> E[Check BUP campus demand and tariff rates]
+			E --> F{Solar voltage and energy enough for cost trade-off?}
+			F -->|Yes| G[Power BUP campus via solar]
+			F -->|No| H[Use battery dispatch]
+			H --> I{Battery reserve and state of charge above minimum threshold?}
+			I -->|No| J[Use grid, respecting max_grid_window]
+			I -->|Yes| K[Power BUP campus via battery]
+			J --> L[Power BUP campus via grid and solar]
+		end
 
-		C --> E[Parse operator notes and apply directives]
-		E --> F[Check solar generation forecast]
-		F --> G[Check BUP campus demand and tariff rates]
-		G --> H{Solar voltage and energy enough for cost trade-off?}
-		H -->|Yes| I[Power BUP campus via solar]
-		H -->|No| J[Use battery dispatch]
+		subgraph NIGHT[Nighttime cycle and optimization]
+			M[Evaluate nighttime phase] --> N[Check battery voltage and state of charge]
+			N --> O{Sufficient energy and end-of-day neutrality feasible?}
+			O -->|No| P[Use grid, accounting for dynamic tariffs]
+			O -->|Yes| Q[Discharge battery or hold reserve]
+			Q --> R[Evaluate forward plan: charge at cheaper future hour]
+			P --> R
+			R --> S[Enforce end-of-day neutrality: battery_energy[23] = initial_energy]
+		end
 
-		D --> K[Evaluate nighttime phase]
-		K --> L[Check battery voltage and state of charge]
-		L --> M{Sufficient energy and end-of-day neutrality feasible?}
-		M -->|Yes| N[Discharge battery or hold reserve]
-		M -->|No| O[Use grid, accounting for dynamic tariffs]
-		N --> P[Evaluate forward plan and charge at cheaper future hour]
-		O --> P
-		P --> Q[Enforce end-of-day neutrality: battery_energy[23] = initial_energy]
-
-		J --> R{Battery reserve and state of charge above minimum?}
-		R -->|Yes| S[Use grid with reserve protection]
-		R -->|No| T[Power BUP campus via grid and solar]
-
-		I --> U[Finish and continue 24-hour loop]
-		S --> U
-		T --> U
-		Q --> U
+		B -->|Daytime| C
+		B -->|Nighttime| M
+		G --> T[Finish current hour and continue 24-hour loop]
+		K --> T
+		L --> T
+		S --> T
+		T --> B
 
 		classDef start fill:#1e88e5,color:#fff,stroke:#0d47a1,stroke-width:2px;
 		classDef day fill:#fff3cd,color:#5f4300,stroke:#f0ad00,stroke-width:2px;
@@ -75,13 +77,25 @@ flowchart TD
 		classDef finish fill:#c8e6c9,color:#164a19,stroke:#2e7d32,stroke-width:2px;
 
 		class A start;
-		class C,E,F,G day;
-		class D,K,L,N,P,Q night;
-		class B,H,M,R decision;
-		class O,S grid;
-		class I,T solar;
-		class J,U finish;
+		class C,D,E,F,G,H,I,K day;
+		class M,N,O,P,Q,R,S night;
+		class B,F,I,O decision;
+		class J,L,P grid;
+		class G,K solar;
+		class A,T finish;
 ```
+
+### How the optimizer works through the flow
+
+1. **Start with BUP's 24-hour inputs.** The API receives demand, solar, tariffs, battery state, and optional operator notes for hours `0` through `23`.
+2. **Choose the operating phase.** The loop evaluates the current hour as daytime or nighttime. Both branches use the same forecasts and battery limits.
+3. **Apply human instructions.** Operator notes are parsed into constraints such as no-charge windows, no-discharge windows, grid caps, and minimum battery reserve.
+4. **Prioritize daytime solar.** The optimizer checks whether forecast solar can serve BUP demand. Solar is used directly first; extra solar can charge the battery when capacity and charge-rate limits allow. Any remainder is curtailed.
+5. **Protect the battery reserve.** If solar is insufficient, the optimizer checks the battery state of charge and minimum reserve before discharging. If the reserve cannot be used, grid energy supplies BUP instead.
+6. **Optimize nighttime energy.** When solar is unavailable, the model compares battery energy, future demand, tariffs, and end-of-day feasibility. It discharges during expensive hours when that is beneficial and holds reserve when required.
+7. **Plan charging economically.** Charging is allowed only when the battery has room, the charge rate allows it, and the result supports the forward 24-hour plan. This prevents the battery from being emptied or overfilled at the wrong time.
+8. **Enforce the final battery state.** The LP constraint `battery_energy[23] = initial_energy` ensures the schedule ends with the same battery energy with which BUP started.
+9. **Return the next hourly decision.** The loop continues until all 24 hours are evaluated, then returns the full schedule, cost, energy totals, and applied constraints as JSON.
 
 ## ✨ Features
 
