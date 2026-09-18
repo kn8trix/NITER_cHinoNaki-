@@ -1,20 +1,24 @@
-# GridWise Energy Optimization Backend
+# ⚡ GridWise Energy Optimization Backend
 
-> A decision-support backend for Bangladesh University of Professionals (BUP) that plans economical, reliable 24-hour campus energy dispatch.
+> **A smarter energy plan for Bangladesh University of Professionals (BUP).**
 
-GridWise is a FastAPI service that combines solar generation, campus demand, battery state, electricity tariffs, and natural-language operator instructions into an optimal hourly dispatch plan. The project is designed around BUP as the primary campus and test subject: it helps campus operators decide when to use solar, charge or discharge storage, and import electricity from the grid.
+GridWise combines solar generation, campus demand, battery state, tariffs, and plain-language operator instructions into an optimal 24-hour dispatch plan for BUP.
 
-## Live Demo
+[![API](https://img.shields.io/badge/API-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://niter-chino-naki-67fatbwdq-k8-s-projects.vercel.app/)
+[![Solver](https://img.shields.io/badge/Solver-PuLP%20%2B%20CBC-2563eb?style=for-the-badge)](https://github.com/coin-or/pulp)
+[![Deployment](https://img.shields.io/badge/Deployment-Vercel-111827?style=for-the-badge&logo=vercel&logoColor=white)](https://niter-chino-naki-67fatbwdq-k8-s-projects.vercel.app/)
+
+## 🌐 Live Demo
 
 - **Live API:** [niter-chino-naki-67fatbwdq-k8-s-projects.vercel.app](https://niter-chino-naki-67fatbwdq-k8-s-projects.vercel.app/)
 - **Optimization endpoint:** `POST /optimize`
 - **Health check:** `GET /health`
 
-## Why BUP?
+## 🏫 Why BUP?
 
-BUP is a strong use case for a campus-scale energy optimizer because its academic buildings, administrative facilities, laboratories, residential areas, and shared services have changing demand throughout the day. Solar output is also time-dependent, while grid prices can make some hours significantly more expensive than others.
+BUP's academic buildings, laboratories, residential areas, and shared services create changing demand throughout the day. Solar availability and grid tariffs also change by hour.
 
-GridWise gives BUP a repeatable operating plan instead of relying on manual decisions:
+GridWise gives BUP operators a clear plan for:
 
 - **During low-price hours:** the battery can charge when useful and permitted.
 - **During sunny hours:** solar is used directly for campus demand before excess energy is curtailed or stored.
@@ -22,11 +26,11 @@ GridWise gives BUP a repeatable operating plan instead of relying on manual deci
 - **During reserve-sensitive periods:** minimum battery energy can be protected for resilience.
 - **At the end of the day:** the optimizer enforces battery neutrality so the plan is operationally consistent with the initial state.
 
-### Example BUP scenario
+### 🎯 Example BUP scenario
 
-Suppose BUP expects high demand around evening class, laboratory, and campus-service hours while solar production falls to zero. GridWise can preserve energy during the day, use available solar directly, charge within the battery's power limit, and discharge during expensive evening tariffs. The result is a 24-hour schedule that shows exactly how much energy comes from the grid, solar, and battery each hour.
+When evening classes and campus services raise demand after solar production falls, GridWise preserves energy earlier, uses solar directly, and discharges the battery during expensive evening tariffs. BUP receives a transparent schedule showing the grid, solar, and battery contribution for every hour.
 
-## Dispatch Flow
+## 🌞🌙 Dispatch Flow
 
 The following flow captures the operating logic used by the project. The daytime and nighttime branches converge into one continuous 24-hour optimization loop.
 
@@ -79,19 +83,19 @@ flowchart TD
 		class J,U finish;
 ```
 
-## Features
+## ✨ Features
 
-- **Economic dispatch:** minimizes total grid-import cost across a 24-hour horizon.
-- **Solar-first balancing:** uses available solar directly for campus demand.
-- **Battery optimization:** respects initial energy, capacity, charge rate, discharge rate, and reserve limits.
-- **Tariff awareness:** shifts battery use toward expensive grid hours when constraints allow.
-- **Natural-language directives:** parses operator notes such as `no charging during peak hour 18` and `keep minimum battery reserve 25 kwh`.
-- **Deterministic JSON:** returns a stable top-level response with `status`, `total_cost_usd`, `schedule`, and `summary`.
-- **Nested case compatibility:** accepts both the native flat schema and supported nested GridWise case-pack payloads.
+- 💰 **Economic dispatch:** minimizes 24-hour grid-import cost.
+- ☀️ **Solar-first balancing:** uses available solar for campus demand.
+- 🔋 **Battery optimization:** respects capacity, rate, state, and reserve limits.
+- 📈 **Tariff awareness:** prioritizes battery use during expensive hours.
+- 🗣️ **Natural-language directives:** understands notes such as `no charging during peak hour 18`.
+- 📦 **Stable JSON:** returns `status`, `total_cost_usd`, `schedule`, and `summary`.
+- 🔁 **Flexible input:** accepts native flat payloads and supported nested case packs.
 
-## API Usage
+## 🚀 API Usage
 
-Send a `POST` request to `/optimize` with six required optimization inputs and optional operator notes.
+Send a `POST` request to `/optimize` with six required optimization inputs and optional operator notes. Every forecast array contains 24 hourly values.
 
 ### Request body
 
@@ -110,7 +114,7 @@ Send a `POST` request to `/optimize` with six required optimization inputs and o
 }
 ```
 
-Every forecast array contains exactly 24 hourly values. `operator_notes` accepts either a string or a list of strings.
+`operator_notes` accepts either a string or a list of strings.
 
 ### Example request with cURL
 
@@ -163,57 +167,9 @@ curl -X POST \
 }
 ```
 
-The real response contains 24 schedule objects, one for each hour from `0` through `23`. The example shows the contract and one representative hourly record.
+The real response contains 24 schedule objects, one for each hour from `0` through `23`.
 
-## Architecture
-
-```text
-Client / BUP operations dashboard
-							|
-							v
-			 FastAPI POST /optimize
-							|
-			Pydantic request validation
-							|
-			Operator-note constraint parser
-							|
-				PuLP linear-program model
-							|
-				24-hour dispatch schedule
-							|
-					JSON response
-```
-
-### Core modules
-
-- `main.py` - FastAPI application, request validation, schema normalization, and response handling.
-- `parser.py` - converts operator notes into structured constraints.
-- `optimizer.py` - builds and solves the 24-hour PuLP optimization model.
-- `wsgi.py` - deployment entry point for the serverless environment.
-
-## Mathematical Model
-
-For each hour $h$, the optimizer balances energy with:
-
-$$
-grid_h + solarUsed_h + discharge_h = demand_h + charge_h
-$$
-
-Battery state evolves as:
-
-$$
-battery_h = battery_{h-1} + charge_h - discharge_h
-$$
-
-The objective is to minimize total grid cost:
-
-$$
-\min \sum_{h=0}^{23} grid_h \times tariff_h
-$$
-
-The model also enforces battery bounds, charge and discharge limits, operator directives, and end-of-day neutrality.
-
-## Local Development
+## 🛠️ Run Locally
 
 ```bash
 python3 -m venv .venv
@@ -230,11 +186,11 @@ Check it with:
 curl http://127.0.0.1:8000/health
 ```
 
-## Verification
+## ✅ Verification
 
-The deployed API was tested with eight BUP-style GridWise scenarios covering balanced demand, high demand peaks, solar surplus, low battery capacity, flat tariffs, charging restrictions, zero solar, and low C-rate limits. All eight returned HTTP `200`, `status: "Optimal"`, and 24 hourly schedule records.
+Eight BUP-style scenarios were tested: balanced demand, high demand, solar surplus, low battery capacity, flat tariffs, charging restrictions, zero solar, and low C-rate limits. All eight returned HTTP `200`, `status: "Optimal"`, and 24 hourly schedule records.
 
-## Technology Stack
+## 🧰 Technology Stack
 
 - Python 3
 - FastAPI
@@ -242,9 +198,3 @@ The deployed API was tested with eight BUP-style GridWise scenarios covering bal
 - PuLP / CBC linear-program solver
 - OpenRouter-compatible operator-note parsing
 - Vercel Serverless Functions
-
-## Team / Context
-
-**NITER cHinoNaki - BUP Hackathon**
-
-GridWise is presented as a practical campus-energy optimization prototype for BUP. Its goal is to help campus stakeholders make transparent, cost-aware dispatch decisions while preserving operational constraints and battery resilience.
