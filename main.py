@@ -11,8 +11,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from typing import Union
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from parser import parse_operator_notes
 from optimizer import optimize
@@ -49,8 +51,8 @@ class OptimizeRequest(BaseModel):
         description="Maximum battery capacity (kWh).",
     )
     max_c_rate: float = Field(
-        ..., gt=0, le=1.0,
-        description="Max charge/discharge rate as fraction of capacity per hour.",
+        ..., gt=0,
+        description="Max charge/discharge rate in kWh/hour (absolute C-rate).",
     )
     demand_forecast: list[float] = Field(
         ..., min_length=24, max_length=24,
@@ -64,10 +66,19 @@ class OptimizeRequest(BaseModel):
         ..., min_length=24, max_length=24,
         description="Hourly grid tariff ($/kWh), 24 values.",
     )
-    operator_notes: str | None = Field(
+    operator_notes: Union[str, list[str], None] = Field(
         None,
-        description="Free-text operator notes / directives (optional).",
+        description="Free-text operator notes / directives (optional). Accepts a string or a list of strings.",
     )
+
+    @field_validator("operator_notes", mode="before")
+    @classmethod
+    def _join_notes(cls, v: Union[str, list[str], None]) -> str | None:
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return " ".join(str(item) for item in v)
+        return v
 
 
 class OptimizeResponse(BaseModel):
@@ -106,7 +117,10 @@ def run_optimization(req: OptimizeRequest):
     """
     try:
         # 1. Parse operator notes → structured constraints
-        constraints = parse_operator_notes(req.operator_notes)
+        notes_text = req.operator_notes if isinstance(req.operator_notes, str) else None
+        if isinstance(req.operator_notes, list):
+            notes_text = " ".join(str(n) for n in req.operator_notes)
+        constraints = parse_operator_notes(notes_text)
         logger.info("Parsed constraints: %s", constraints.model_dump())
 
         # 2. Run the LP optimizer

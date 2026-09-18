@@ -53,8 +53,9 @@ def optimize(
     battery_capacity : float
         Maximum battery capacity (kWh).
     max_c_rate : float
-        Maximum charge/discharge rate expressed as a *fraction* of capacity
-        per hour (e.g., 0.5 = half the capacity in one hour).
+        Maximum charge/discharge rate in kWh/hour (absolute C-rate).
+        For example, 20.0 means the battery can charge or discharge
+        at most 20 kWh in any single hour.
     demand : list[float]
         Hourly campus demand forecast (kWh) for 24 hours.
     solar : list[float]
@@ -72,8 +73,9 @@ def optimize(
     if constraints is None:
         constraints = ParsedConstraints()
 
-    max_charge = battery_capacity * max_c_rate
-    max_discharge = battery_capacity * max_c_rate
+    # max_c_rate is an absolute rate in kWh/hour, clamped to capacity
+    max_charge = min(max_c_rate, battery_capacity)
+    max_discharge = min(max_c_rate, battery_capacity)
 
     # ---- Helpers to build hour-window sets ----
     def _hours_in_windows(windows: list[list[int]]) -> set[int]:
@@ -94,7 +96,11 @@ def optimize(
         for h in range(s, e):
             max_grid_map[h] = min(max_grid_map.get(h, float("inf")), float(w["max_kwh"]))
 
-    min_reserve_kwh = constraints.minimum_battery_reserve * battery_capacity
+    # minimum_battery_reserve: <= 1.0 → fraction of capacity; > 1.0 → absolute kWh
+    if constraints.minimum_battery_reserve <= 1.0:
+        min_reserve_kwh = constraints.minimum_battery_reserve * battery_capacity
+    else:
+        min_reserve_kwh = constraints.minimum_battery_reserve
 
     # ==================================================================
     # Build LP

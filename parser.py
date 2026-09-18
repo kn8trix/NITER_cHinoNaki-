@@ -35,8 +35,8 @@ class ParsedConstraints(BaseModel):
     )
     minimum_battery_reserve: float = Field(
         default=0.0,
-        ge=0.0, le=1.0,
-        description="Minimum battery state-of-charge as a fraction (0-1).",
+        ge=0.0,
+        description="Minimum battery reserve. Values <=1.0 are treated as a fraction of capacity; values >1.0 are treated as absolute kWh.",
     )
 
 
@@ -67,7 +67,7 @@ have no data for, but always include the full structure):
   "no_charge_windows": [[start_hour, end_hour], ...],
   "no_discharge_windows": [[start_hour, end_hour], ...],
   "max_grid_windows": [{"start": start_hour, "end": end_hour, "max_kwh": value}, ...],
-  "minimum_battery_reserve": float  // 0.0 – 1.0
+  "minimum_battery_reserve": float  // fraction 0.0 – 1.0 OR absolute kWh value
 }
 
 Rules:
@@ -75,10 +75,66 @@ Rules:
 - Use integer hour boundaries (e.g., "12 to 14" → [12, 14]).
 - Percentages must be converted to 0-1 fractions (e.g., 20% → 0.2).
 - If operator notes mention kWh limits on grid import, map them to max_grid_windows.
+- If notes mention a minimum battery reserve in kWh (e.g., "25 kWh"), set
+  minimum_battery_reserve to the kWh value as-is (the optimizer will handle it).
+- If notes mention a minimum battery reserve as a percentage (e.g., "20%"),
+  set minimum_battery_reserve to the fraction (e.g., 0.2).
 - If the notes are empty, contradictory, or unintelligible, return the empty
   schema with all values at their defaults.
 - Return ONLY the JSON, no explanation or markdown fences.
 """
+
+
+# ---------------------------------------------------------------------------
+# Rule-based fallback parser (works without API key)
+# ---------------------------------------------------------------------------
+
+import re
+
+
+def _rule_based_parse(notes: str) -> ParsedConstraints:
+    """
+    Simple regex-based parser for common operator note patterns.
+    Returns ParsedConstraints with any matches found.
+    """
+    result = ParsedConstraints()
+    lower = notes.lower()
+
+    # Pattern: "no charging during hour X" / "no charging from X to Y"
+    for m in re.finditer(r'no\s+charg\w+.*?(?:hour|from|at)\s+(\d+)(?:\s*to\s*(\d+))?', lower):
+        h1 = int(m.group(1))
+        h2 = int(m.group(2)) + 1 if m.group(2) else h1 + 1
+        result.no_charge_windows.append([h1, h2])
+
+    # Pattern: "no discharging during hour X" / "no discharge from X to Y"
+    for m in re.finditer(r'no\s+discharg\w+.*?(?:hour|from|at)\s+(\d+)(?:\s*to\s*(\d+))?', lower):
+        h1 = int(m.group(1))
+        h2 = int(m.group(2)) + 1 if m.group(2) else h1 + 1
+        result.no_discharge_windows.append([h1, h2])
+
+    # Pattern: "cap grid at X kWh" / "grid cap X kWh" at hour(s)
+    for m in re.finditer(r'(?:cap|limit).*?grid.*?(\d+)\s*kwh.*?(?:hour|at|from)\s*(\d+)(?:\s*to\s*(\d+))?', lower):
+        max_kw = float(m.group(1))
+        h1 = int(m.group(2))
+        h2 = int(m.group(3)) + 1 if m.group(3) else h1 + 1
+        result.max_grid_windows.append({"start": h1, "end": h2, "max_kwh": max_kw})
+    for m in re.finditer(r'(?:cap|limit).*?grid.*?(?:hour|at|from)\s*(\d+)(?:\s*to\s*(\d+))?.*?(\d+)\s*kwh', lower):
+        h1 = int(m.group(1))
+        h2 = int(m.group(2)) + 1 if m.group(2) else h1 + 1
+        max_kw = float(m.group(3))
+        result.max_grid_windows.append({"start": h1, "end": h2, "max_kwh": max_kw})
+
+    # Pattern: "minimum battery reserve X kWh" or "keep X kWh reserve"
+    m = re.search(r'(?:minimum|keep|min).*?(?:battery|reserve).*?(\d+(?:\.\d+)?)\s*kwh', lower)
+    if m:
+        result.minimum_battery_reserve = float(m.group(1))  # absolute kWh
+
+    # Pattern: "minimum battery reserve X%"
+    m = re.search(r'(?:minimum|keep|min).*?(?:battery|reserve).*?(\d+(?:\.\d+)?)\s*%', lower)
+    if m:
+        result.minimum_battery_reserve = float(m.group(1)) / 100.0  # fraction
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -110,10 +166,19 @@ def parse_operator_notes(
     timeout : int
         HTTP request timeout in seconds.
     """
-    # --- Guard: empty / None notes → no-op immediately ---
+    # --- Guard: empty / None notes → try rule-based fallback first, then no-op ---
     if not notes or not notes.strip():
         logger.info("Operator notes empty – returning no-op constraints.")
         return NO_OP_CONSTRAINTS
+
+    # Try rule-based parsing first (works without API key)
+    rule_result = _rule_based_parse(notes)
+    if any([rule_result.no_charge_windows,
+            rule_result.no_discharge_windows,
+            rule_result.max_grid_windows,
+            rule_result.minimum_battery_reserve > 0]):
+        logger.info("Rule-based parse succeeded: %s", rule_result)
+        return rule_result
 
     api_key = api_key or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
