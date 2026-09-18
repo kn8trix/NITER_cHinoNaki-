@@ -10,9 +10,28 @@ GridWise combines solar generation, campus demand, battery state, tariffs, and p
 
 ## 🌐 Live Demo
 
-- **Live API:** [niter-chino-naki-67fatbwdq-k8-s-projects.vercel.app](https://niter-chino-naki-67fatbwdq-k8-s-projects.vercel.app/)
+- **API base URL:** [niter-chino-naki-8l3nfxdka-k8-s-projects.vercel.app](https://niter-chino-naki-8l3nfxdka-k8-s-projects.vercel.app/)
+- **Interactive API docs:** [Swagger UI](https://niter-chino-naki-8l3nfxdka-k8-s-projects.vercel.app/docs)
 - **Optimization endpoint:** `POST /optimize`
 - **Health check:** `GET /health`
+
+## 🧪 API Evaluation
+
+Evaluators can test GridWise directly through the [interactive Swagger docs](https://niter-chino-naki-8l3nfxdka-k8-s-projects.vercel.app/docs) or by sending a `POST` request to:
+
+```text
+https://niter-chino-naki-8l3nfxdka-k8-s-projects.vercel.app/optimize
+```
+
+Use a standard GridWise JSON payload containing:
+
+- 24-hour `demand_forecast`
+- 24-hour `solar_forecast`
+- 24-hour `tariffs`
+- Battery parameters such as `initial_energy`, `battery_capacity`, and `max_c_rate`
+- Optional `operator_notes`
+
+The backend returns the complete 24-hour optimal schedule, total cost, and parsed constraints in the required JSON schema.
 
 ## 🏫 Why BUP?
 
